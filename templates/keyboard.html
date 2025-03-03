@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <!-- Ensures proper scaling on mobile devices -->
+  <!-- Ensure proper scaling on mobile devices -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Pi HID Keyboard</title>
   <style>
@@ -18,7 +18,18 @@
     h1 {
       margin-bottom: 10px;
     }
-
+    /* Connection Indicator */
+    #connectionIndicator {
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      width: 15px;
+      height: 15px;
+      border-radius: 50%;
+      background-color: red; /* default red until confirmed */
+      border: 1px solid #fff;
+      z-index: 1000;
+    }
     /* Key Press Log (below the title) */
     .key-log {
       display: flex;
@@ -44,13 +55,11 @@
     .key-press.fade-out {
       opacity: 0;
     }
-
     /* Container for everything */
     .container {
       width: 100%;
       margin: 0 auto;
     }
-
     /* Arrow Keys & Extra Buttons (T-shape) */
     .arrow-keys {
       margin-bottom: 30px;
@@ -78,7 +87,6 @@
     }
     .arrow:hover { background: #444; }
     .arrow:active { background: #555; }
-
     /* Main Keyboard */
     .keyboard {
       display: flex;
@@ -109,7 +117,6 @@
     .key:hover { background: #444; }
     .key:active { background: #555; }
     .wide { min-width: 80px; }
-
     /* Toggleable Text Input Section */
     .text-input-section {
       margin-top: 20px;
@@ -149,7 +156,6 @@
       transition: background 0.2s;
     }
     #toggleTextInputButton:hover { background: #666; }
-
     /* Responsive adjustments for smaller screens */
     @media (max-width: 600px) {
       .arrow {
@@ -170,11 +176,14 @@
   </style>
 </head>
 <body>
+  <!-- Connection Status Indicator -->
+  <div id="connectionIndicator"></div>
+
   <h1>Raspberry Pi HID Keyboard</h1>
-  
+
   <!-- Key Press Log -->
   <div class="key-log" id="keyLog"></div>
-  
+
   <div class="container">
     <!-- Arrow Keys (T-shape) -->
     <div class="arrow-keys">
@@ -284,13 +293,18 @@
       });
     });
 
+    // Modified AJAX function that updates the connection indicator based on the response.
     function sendKeyAjax(key) {
       var xhr = new XMLHttpRequest();
       xhr.open("POST", "/send_key", true);
       xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
       xhr.onreadystatechange = function() {
-        if (xhr.readyState === XMLHttpRequest.DONE && xhr.status !== 200) {
-          console.error("Error sending key:", xhr.responseText);
+        if (xhr.readyState === XMLHttpRequest.DONE) {
+          if (xhr.status === 200) {
+            document.getElementById("connectionIndicator").style.backgroundColor = "green";
+          } else {
+            document.getElementById("connectionIndicator").style.backgroundColor = "red";
+          }
         }
       };
       xhr.send("key=" + encodeURIComponent(key));
@@ -304,7 +318,7 @@
       newItem.textContent = key;
       // Insert as first child (newest on left)
       keyLog.insertBefore(newItem, keyLog.firstChild);
-      void newItem.offsetWidth; // force reflow
+      void newItem.offsetWidth; // force reflow for transition
       newItem.classList.add('visible');
       // Auto-remove after 30 seconds
       setTimeout(() => { removeKey(newItem); }, 30000);
@@ -338,8 +352,8 @@
     }
 
     // Send text from textarea as keystrokes.
-    // It supports special keys if the text between curly braces (e.g. {enter}, {esc}, {f1}) is found.
-    // A delay of 300ms is used between each key.
+    // Supports special keys with curly braces, e.g. {enter} will map to the Enter action.
+    // Uses a 300ms delay between each key.
     function sendText() {
       const rawText = document.getElementById('textInput').value.trim();
       if (!rawText) return;
@@ -368,10 +382,35 @@
         }
         sendKeyAjax(key);
         addKeyToLog(key);
-        setTimeout(sendNext, 300); // increased delay to 300ms
+        setTimeout(sendNext, 300);
       }
       sendNext();
     }
+
+    // Periodically ping the server to check connection.
+    // Append a timestamp to the URL to avoid caching.
+    function checkConnection() {
+      var xhr = new XMLHttpRequest();
+      xhr.open("GET", "/ping?ts=" + new Date().getTime(), true);
+      xhr.timeout = 5000; // 5 seconds timeout
+      xhr.onreadystatechange = function() {
+        if (xhr.readyState === XMLHttpRequest.DONE) {
+          if (xhr.status === 200) {
+            document.getElementById("connectionIndicator").style.backgroundColor = "green";
+          } else {
+            document.getElementById("connectionIndicator").style.backgroundColor = "red";
+          }
+        }
+      };
+      xhr.ontimeout = function() {
+        document.getElementById("connectionIndicator").style.backgroundColor = "red";
+      };
+      xhr.onerror = function() {
+        document.getElementById("connectionIndicator").style.backgroundColor = "red";
+      };
+      xhr.send();
+    }
+    setInterval(checkConnection, 5000);
   </script>
 </body>
 </html>

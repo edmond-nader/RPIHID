@@ -107,6 +107,11 @@ def send_key():
     else:
         return jsonify({"success": False, "error": "Failed to write to HID device"}), 500
 
+# Add a ping endpoint to support connection monitoring.
+@app.route("/ping")
+def ping():
+    return "pong", 200
+
 if __name__ == "__main__":
     # Listen on all interfaces to allow access from other devices (e.g., your phone)
     app.run(host="0.0.0.0", port=5000, debug=True)

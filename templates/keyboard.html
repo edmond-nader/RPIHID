@@ -16,25 +16,49 @@
       text-align: center;
     }
     h1 {
+      margin-bottom: 10px;
+    }
+
+    /* Key Press Log (below the title) */
+    .key-log {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      align-items: center;
+      gap: 8px;
       margin-bottom: 20px;
+      width: 100%;
+      box-sizing: border-box;
+    }
+    .key-press {
+      background: #444;
+      border-radius: 4px;
+      padding: 5px 10px;
+      opacity: 0; /* start hidden for fade-in */
+      transition: opacity 0.5s;
+      white-space: nowrap;
+    }
+    .key-press.visible {
+      opacity: 1;
+    }
+    .key-press.fade-out {
+      opacity: 0;
     }
 
     /* Container for everything */
     .container {
-      max-width: 1200px;
+      width: 100%;
       margin: 0 auto;
     }
 
-    /* Arrow Keys (and extra buttons) at Top in a T-shape + extra row */
+    /* Arrow Keys & Extra Buttons (T-shape) */
     .arrow-keys {
       margin-bottom: 30px;
     }
     .arrow-row {
       display: flex;
       justify-content: center;
-      flex-wrap: nowrap;
-      overflow-x: auto;
-      white-space: nowrap;
+      flex-wrap: wrap;
       margin: 5px 0;
     }
     .arrow {
@@ -42,7 +66,7 @@
       border: 1px solid #444;
       border-radius: 5px;
       margin: 5px;
-      padding: 20px 30px;
+      padding: 20px 30px; /* Larger padding for easy tapping */
       text-align: center;
       cursor: pointer;
       user-select: none;
@@ -52,12 +76,8 @@
       min-height: 60px;
       white-space: nowrap;
     }
-    .arrow:hover {
-      background: #444;
-    }
-    .arrow:active {
-      background: #555;
-    }
+    .arrow:hover { background: #444; }
+    .arrow:active { background: #555; }
 
     /* Main Keyboard */
     .keyboard {
@@ -69,9 +89,7 @@
     .row {
       display: flex;
       justify-content: center;
-      flex-wrap: nowrap;
-      overflow-x: auto;
-      white-space: nowrap;
+      flex-wrap: wrap;
       margin: 5px 0;
     }
     .key {
@@ -88,46 +106,51 @@
       min-width: 50px;
       white-space: nowrap;
     }
-    .key:hover {
-      background: #444;
+    .key:hover { background: #444; }
+    .key:active { background: #555; }
+    .wide { min-width: 80px; }
+
+    /* Toggleable Text Input Section */
+    .text-input-section {
+      margin-top: 20px;
     }
-    .key:active {
+    .text-input-section textarea {
+      width: 80%;
+      max-width: 500px;
+      height: 100px;
+      padding: 10px;
+      font-size: 1rem;
+      border-radius: 5px;
+      border: 1px solid #444;
+      background: #333;
+      color: #fff;
+      resize: vertical;
+    }
+    .text-input-section button {
+      margin-top: 10px;
+      padding: 10px 20px;
+      font-size: 1rem;
       background: #555;
+      border: 1px solid #444;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: background 0.2s;
     }
-    .wide {
-      min-width: 80px;
+    .text-input-section button:hover { background: #666; }
+    /* Toggle Button */
+    #toggleTextInputButton {
+      margin-top: 20px;
+      padding: 10px 20px;
+      font-size: 1rem;
+      background: #555;
+      border: 1px solid #444;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: background 0.2s;
     }
+    #toggleTextInputButton:hover { background: #666; }
 
-    /* Key Press Log at Bottom */
-    .key-log {
-      position: fixed;
-      bottom: 20px;
-      left: 50%;
-      transform: translateX(-50%);
-      display: flex;
-      gap: 8px;
-      align-items: center;
-      /* Optional styling for the log container background */
-      /* background: rgba(0, 0, 0, 0.5); padding: 5px; border-radius: 5px; */
-    }
-    .key-press {
-      background: #444;
-      border-radius: 4px;
-      padding: 5px 10px;
-      opacity: 0;  /* start hidden for fade-in */
-      transition: opacity 0.5s;
-      white-space: nowrap;
-    }
-    /* When visible, the opacity is 1 */
-    .key-press.visible {
-      opacity: 1;
-    }
-    /* Fade-out class triggers opacity transition to 0 */
-    .key-press.fade-out {
-      opacity: 0;
-    }
-
-    /* Responsive adjustments */
+    /* Responsive adjustments for smaller screens */
     @media (max-width: 600px) {
       .arrow {
         font-size: 1.3rem;
@@ -139,8 +162,9 @@
         font-size: 0.9rem;
         min-width: 40px;
       }
-      .wide {
-        min-width: 60px;
+      .wide { min-width: 60px; }
+      .text-input-section textarea {
+        width: 90%;
       }
     }
   </style>
@@ -148,8 +172,11 @@
 <body>
   <h1>Raspberry Pi HID Keyboard</h1>
   
+  <!-- Key Press Log -->
+  <div class="key-log" id="keyLog"></div>
+  
   <div class="container">
-    <!-- Arrow Keys at the Top (T-shape) -->
+    <!-- Arrow Keys (T-shape) -->
     <div class="arrow-keys">
       <div class="arrow-row">
         <div class="arrow" data-key="up">↑</div>
@@ -236,62 +263,56 @@
         <div class="key wide" data-key="space">Space</div>
       </div>
     </div>
-  </div>
 
-  <!-- Key Press Log at Bottom -->
-  <div class="key-log" id="keyLog"></div>
+    <!-- Toggle Text Input Button -->
+    <button id="toggleTextInputButton" onclick="toggleTextInput()">Show Text Input</button>
+
+    <!-- Text Input Section (hidden by default) -->
+    <div id="textInputSection" class="text-input-section" style="display: none;">
+      <textarea id="textInput" placeholder="Type or paste text here..."></textarea><br>
+      <button onclick="sendText()">Send Text as Keystrokes</button>
+    </div>
+  </div>
 
   <script>
     // Attach click handlers to all .key and .arrow elements
     document.querySelectorAll('.key, .arrow').forEach(function(elem) {
       elem.addEventListener('click', function() {
         var key = this.getAttribute('data-key');
-
-        // Send key to the server
-        var xhr = new XMLHttpRequest();
-        xhr.open("POST", "/send_key", true);
-        xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
-        xhr.onreadystatechange = function() {
-          if (xhr.readyState === XMLHttpRequest.DONE && xhr.status !== 200) {
-            console.error("Error sending key:", xhr.responseText);
-          }
-        };
-        xhr.send("key=" + encodeURIComponent(key));
-
-        // Display the key in the log (newest inserted at the left)
+        sendKeyAjax(key);
         addKeyToLog(key);
       });
     });
 
-    // Function to add key press to log
+    function sendKeyAjax(key) {
+      var xhr = new XMLHttpRequest();
+      xhr.open("POST", "/send_key", true);
+      xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
+      xhr.onreadystatechange = function() {
+        if (xhr.readyState === XMLHttpRequest.DONE && xhr.status !== 200) {
+          console.error("Error sending key:", xhr.responseText);
+        }
+      };
+      xhr.send("key=" + encodeURIComponent(key));
+    }
+
+    // Add key press to log with fade-in and auto-removal (max 10 items or after 30s)
     function addKeyToLog(key) {
       const keyLog = document.getElementById('keyLog');
-
-      // Create a new element for this key press and set initial opacity to 0
       const newItem = document.createElement('div');
       newItem.classList.add('key-press');
       newItem.textContent = key;
-      
-      // Insert the new key press as the first child (newest on left)
+      // Insert as first child (newest on left)
       keyLog.insertBefore(newItem, keyLog.firstChild);
-
-      // Force reflow then add 'visible' class for fade-in effect
-      void newItem.offsetWidth;
+      void newItem.offsetWidth; // force reflow
       newItem.classList.add('visible');
-
-      // Set timeout for auto-removal after 30 seconds
-      setTimeout(() => {
-        removeKey(newItem);
-      }, 30000);
-
-      // If there are more than 10 key presses, remove the rightmost (oldest)
+      // Auto-remove after 30 seconds
+      setTimeout(() => { removeKey(newItem); }, 30000);
+      // If more than 10 items, remove the oldest (last child)
       if (keyLog.children.length > 10) {
-        // Remove the last child with fade-out
         removeKey(keyLog.lastChild);
       }
     }
-
-    // Function to fade out and remove a key press element
     function removeKey(item) {
       if (!item) return;
       item.classList.remove('visible');
@@ -300,7 +321,56 @@
         if (item.parentNode) {
           item.parentNode.removeChild(item);
         }
-      }, 500); // Wait for the 0.5s fade-out transition
+      }, 500);
+    }
+
+    // Toggle the text input section
+    function toggleTextInput() {
+      const section = document.getElementById('textInputSection');
+      const btn = document.getElementById('toggleTextInputButton');
+      if (section.style.display === "none") {
+        section.style.display = "block";
+        btn.textContent = "Hide Text Input";
+      } else {
+        section.style.display = "none";
+        btn.textContent = "Show Text Input";
+      }
+    }
+
+    // Send text from textarea as keystrokes.
+    // It supports special keys if the text between curly braces (e.g. {enter}, {esc}, {f1}) is found.
+    // A delay of 300ms is used between each key.
+    function sendText() {
+      const rawText = document.getElementById('textInput').value.trim();
+      if (!rawText) return;
+      let i = 0;
+      function sendNext() {
+        if (i >= rawText.length) return;
+        let key = null;
+        if (rawText[i] === '{') {
+          // Look for matching closing brace
+          let end = rawText.indexOf('}', i);
+          if (end !== -1) {
+            key = rawText.substring(i + 1, end).toLowerCase(); // e.g. "enter", "esc", "f1"
+            i = end + 1;
+          } else {
+            key = rawText[i];
+            i++;
+          }
+        } else {
+          key = rawText[i];
+          i++;
+          if (key === ' ') {
+            key = 'space';
+          } else if (key.match(/[A-Z]/)) {
+            key = key.toLowerCase();
+          }
+        }
+        sendKeyAjax(key);
+        addKeyToLog(key);
+        setTimeout(sendNext, 300); // increased delay to 300ms
+      }
+      sendNext();
     }
   </script>
 </body>

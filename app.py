@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 from flask import Flask, render_template, request, jsonify
 import time
+import subprocess  # Import subprocess for calling OS shutdown
 
 app = Flask(__name__)
 
@@ -107,11 +108,46 @@ def send_key():
     else:
         return jsonify({"success": False, "error": "Failed to write to HID device"}), 500
 
-# Add a ping endpoint to support connection monitoring.
 @app.route("/ping")
 def ping():
     return "pong", 200
 
+# Global dictionary to track shutdown attempts by IP address
+shutdown_attempts = {}
+COOLDOWN_PERIOD = 60  # seconds
+MAX_ATTEMPTS = 3
+
+@app.route("/shutdown", methods=["POST"])
+def shutdown():
+    ip = request.remote_addr
+    now = time.time()
+    attempts = shutdown_attempts.get(ip, {"count": 0, "lock_until": 0})
+    
+    # If the IP is locked, return error with remaining lock time.
+    if now < attempts.get("lock_until", 0):
+        wait_time = int(attempts["lock_until"] - now)
+        return jsonify({"success": False, "error": f"Too many attempts. Please wait {wait_time} seconds."}), 429
+    
+    token = request.form.get("token")
+    # Check token; replace "MY_SHUTDOWN_TOKEN" with your secure token or load from an environment variable.
+    if token != "MY_SHUTDOWN_TOKEN":
+        attempts["count"] = attempts.get("count", 0) + 1
+        if attempts["count"] >= MAX_ATTEMPTS:
+            attempts["lock_until"] = now + COOLDOWN_PERIOD
+            attempts["count"] = 0  # Reset count after locking
+        shutdown_attempts[ip] = attempts
+        return jsonify({"success": False, "error": "Unauthorized"}), 403
+    
+    # Valid token: reset attempts for this IP
+    shutdown_attempts[ip] = {"count": 0, "lock_until": 0}
+    
+    # Instead of shutting down just the Flask server, shut down the entire system.
+    try:
+        # This will call the OS shutdown command. Ensure the process has proper privileges.
+        subprocess.call(["sudo", "shutdown", "-h", "now"])
+        return jsonify({"success": True, "message": "System shutting down..."}), 200
+    except Exception as e:
+        return jsonify({"success": False, "error": f"Shutdown failed: {e}"}), 500
+
 if __name__ == "__main__":
-    # Listen on all interfaces to allow access from other devices (e.g., your phone)
     app.run(host="0.0.0.0", port=5000, debug=True)

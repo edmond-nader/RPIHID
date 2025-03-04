@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 from flask import Flask, render_template, request, jsonify
 import time
-import subprocess  # Import subprocess for calling OS shutdown
+import subprocess
 
 app = Flask(__name__)
 
@@ -76,12 +76,11 @@ HID_DEVICE = "/dev/hidg0"
 
 def send_hid_report(modifier, key_code):
     """
-    Send an 8-byte HID report.
+    Send an 8-byte HID report for the keyboard.
     Report format: [modifier, reserved, key1, key2, key3, key4, key5, key6]
-    This function sends a key press event followed by a release.
     """
     press_report = bytes([modifier, 0x00, key_code, 0x00, 0x00, 0x00, 0x00, 0x00])
-    release_report = bytes(8)  # All zeros signify key release
+    release_report = bytes(8)  # Key release report
     try:
         with open(HID_DEVICE, "wb") as fd:
             fd.write(press_report)
@@ -112,7 +111,7 @@ def send_key():
 def ping():
     return "pong", 200
 
-# Global dictionary to track shutdown attempts by IP address
+# Global dictionary to track shutdown attempts per IP.
 shutdown_attempts = {}
 COOLDOWN_PERIOD = 60  # seconds
 MAX_ATTEMPTS = 3
@@ -122,28 +121,20 @@ def shutdown():
     ip = request.remote_addr
     now = time.time()
     attempts = shutdown_attempts.get(ip, {"count": 0, "lock_until": 0})
-    
-    # If the IP is locked, return error with remaining lock time.
     if now < attempts.get("lock_until", 0):
         wait_time = int(attempts["lock_until"] - now)
         return jsonify({"success": False, "error": f"Too many attempts. Please wait {wait_time} seconds."}), 429
-    
     token = request.form.get("token")
-    # Check token; replace "MY_SHUTDOWN_TOKEN" with your secure token or load from an environment variable.
+    # Validate token (replace with your secure token or load from env variable)
     if token != "MY_SHUTDOWN_TOKEN":
         attempts["count"] = attempts.get("count", 0) + 1
         if attempts["count"] >= MAX_ATTEMPTS:
             attempts["lock_until"] = now + COOLDOWN_PERIOD
-            attempts["count"] = 0  # Reset count after locking
+            attempts["count"] = 0
         shutdown_attempts[ip] = attempts
         return jsonify({"success": False, "error": "Unauthorized"}), 403
-    
-    # Valid token: reset attempts for this IP
     shutdown_attempts[ip] = {"count": 0, "lock_until": 0}
-    
-    # Instead of shutting down just the Flask server, shut down the entire system.
     try:
-        # This will call the OS shutdown command. Ensure the process has proper privileges.
         subprocess.call(["sudo", "shutdown", "-h", "now"])
         return jsonify({"success": True, "message": "System shutting down..."}), 200
     except Exception as e:

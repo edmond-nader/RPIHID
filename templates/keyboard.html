@@ -55,7 +55,7 @@
     .key-press.fade-out {
       opacity: 0;
     }
-    /* Container for everything */
+    /* Container */
     .container {
       width: 100%;
       margin: 0 auto;
@@ -75,7 +75,7 @@
       border: 1px solid #444;
       border-radius: 5px;
       margin: 5px;
-      padding: 20px 30px; /* Larger padding for easy tapping */
+      padding: 20px 30px;
       text-align: center;
       cursor: pointer;
       user-select: none;
@@ -144,7 +144,7 @@
       transition: background 0.2s;
     }
     .text-input-section button:hover { background: #666; }
-    /* Toggle Button */
+    /* Toggle Button for Text Input */
     #toggleTextInputButton {
       margin-top: 20px;
       padding: 10px 20px;
@@ -156,6 +156,19 @@
       transition: background 0.2s;
     }
     #toggleTextInputButton:hover { background: #666; }
+    /* Shutdown Button */
+    #shutdownButton {
+      margin-top: 20px;
+      padding: 10px 20px;
+      font-size: 1rem;
+      background: #a00;
+      border: 1px solid #444;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: background 0.2s;
+      color: #fff;
+    }
+    #shutdownButton:hover { background: #c00; }
     /* Responsive adjustments for smaller screens */
     @media (max-width: 600px) {
       .arrow {
@@ -281,6 +294,9 @@
       <textarea id="textInput" placeholder="Type or paste text here..."></textarea><br>
       <button onclick="sendText()">Send Text as Keystrokes</button>
     </div>
+
+    <!-- Shutdown Button -->
+    <button id="shutdownButton" onclick="shutdownRPi()">Shutdown RPi</button>
   </div>
 
   <script>
@@ -293,7 +309,7 @@
       });
     });
 
-    // Modified AJAX function that updates the connection indicator based on the response.
+    // AJAX function to send a key and update connection indicator.
     function sendKeyAjax(key) {
       var xhr = new XMLHttpRequest();
       xhr.open("POST", "/send_key", true);
@@ -310,7 +326,7 @@
       xhr.send("key=" + encodeURIComponent(key));
     }
 
-    // Add key press to log with fade-in and auto-removal (max 10 items or after 30s)
+    // Log a key press with fade-in and auto-removal (max 10 items or after 30 seconds)
     function addKeyToLog(key) {
       const keyLog = document.getElementById('keyLog');
       const newItem = document.createElement('div');
@@ -318,7 +334,7 @@
       newItem.textContent = key;
       // Insert as first child (newest on left)
       keyLog.insertBefore(newItem, keyLog.firstChild);
-      void newItem.offsetWidth; // force reflow for transition
+      void newItem.offsetWidth; // force reflow
       newItem.classList.add('visible');
       // Auto-remove after 30 seconds
       setTimeout(() => { removeKey(newItem); }, 30000);
@@ -352,7 +368,7 @@
     }
 
     // Send text from textarea as keystrokes.
-    // Supports special keys with curly braces, e.g. {enter} will map to the Enter action.
+    // Supports special keys with curly braces (e.g. {enter}).
     // Uses a 300ms delay between each key.
     function sendText() {
       const rawText = document.getElementById('textInput').value.trim();
@@ -387,8 +403,29 @@
       sendNext();
     }
 
+    // Shutdown function: prompts the user for the token and sends a POST request.
+    function shutdownRPi() {
+      var token = prompt("Enter shutdown token:");
+      if (!token) return;
+      if (confirm("Are you sure you want to shut down the Raspberry Pi?")) {
+        var xhr = new XMLHttpRequest();
+        xhr.open("POST", "/shutdown", true);
+        xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
+        xhr.onreadystatechange = function() {
+          if (xhr.readyState === XMLHttpRequest.DONE) {
+            if (xhr.status === 200) {
+              alert("Server is shutting down.");
+            } else {
+              alert("Shutdown failed: " + xhr.responseText);
+            }
+          }
+        };
+        xhr.send("token=" + encodeURIComponent(token));
+      }
+    }
+
     // Periodically ping the server to check connection.
-    // Append a timestamp to the URL to avoid caching.
+    // Append a timestamp to avoid caching.
     function checkConnection() {
       var xhr = new XMLHttpRequest();
       xhr.open("GET", "/ping?ts=" + new Date().getTime(), true);

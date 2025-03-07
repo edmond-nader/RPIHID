@@ -24,8 +24,7 @@ Be sure not to break the one‑line structure of this file.
 1. Create a Systemd Service File
 Create a new file called /etc/systemd/system/flask-hid.service with the following content:
 
-ini
-Copy
+```ini
 [Unit]
 Description=Flask HID Keyboard Service
 After=network.target
@@ -43,6 +42,7 @@ Restart=always
 
 [Install]
 WantedBy=multi-user.target
+```
 Notes:
 
 User/Group: Make sure the specified user (e.g., pi) has access to /dev/hidg0. If not, either run as root or adjust udev rules accordingly.
@@ -51,15 +51,15 @@ ExecStart: Verify that /usr/bin/python3 is the correct path to your Python inter
 2. Reload systemd and Enable the Service
 After saving the service file, reload systemd and enable/start your new service:
 
-bash
-Copy
+```bash
 sudo systemctl daemon-reload
 sudo systemctl enable flask-hid.service
 sudo systemctl start flask-hid.service
+```
 To check the service status:
 
-bash
-Copy
+```bash
 sudo systemctl status flask-hid.service
+```
 This command should indicate that your Flask HID keyboard service is running.
 

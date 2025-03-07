@@ -10,14 +10,14 @@ dependcies
 
 Edit /boot/config.txt:
 Add the following line to enable the DWC2 overlay:
-bash
-Copy
+```bash
 dtoverlay=dwc2
+```
 Modify /boot/cmdline.txt:
 In the same file, after rootwait, insert (on the same line) the following parameter:
-bash
-Copy
+```bash
 modules-load=dwc2
+```
 Be sure not to break the one‑line structure of this file.
 
 

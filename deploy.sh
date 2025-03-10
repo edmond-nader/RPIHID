@@ -3,7 +3,7 @@
 # This script installs required packages, deploys needed files (setup-usb-hid.sh, update_wifi.sh,
 # wifi_fallback.sh, app.py, HTML templates), creates systemd services, and configures sudoers.
 #
-# It uses the current user (determined by logname/SUDO_USER) rather than hardcoding "pi".
+# It uses the current (non-root) user (determined by logname/SUDO_USER) rather than hardcoding "pi".
 #
 # IMPORTANT: Review this script before running it.
 
@@ -100,7 +100,8 @@ EOS
 chmod +x "$HID_SCRIPT_PATH"
 
 # 3. Create the systemd service unit file for the HID gadget.
-SERVICE_PATH="/etc/systemd/system/usb-gadget.service"
+: "${SERVICE_PATH:=/etc/systemd/system/usb-gadget.service}"
+echo "Creating USB gadget service file at ${SERVICE_PATH}..."
 cat << 'EOF' > "$SERVICE_PATH"
 [Unit]
 Description=Create virtual keyboard USB gadget

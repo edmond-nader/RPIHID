@@ -1,11 +1,13 @@
 #!/bin/bash
 # deploy.sh - Auto deploy script for Raspberry Pi HID keyboard with Wi-Fi configuration and fallback.
-# This script installs required packages, deploys all files (app.py, setup-usb-hid.sh,
-# update_wifi.sh, wifi_fallback.sh, and HTML templates), and creates systemd services.
+# This script installs required packages, deploys all needed files (setup-usb-hid.sh, update_wifi.sh,
+# wifi_fallback.sh, app.py, HTML templates), and creates systemd services.
+#
+# Review the script before running it to ensure security.
 
 set -euo pipefail
 
-# Make sure the script is run as root.
+# Ensure the script is run as root.
 if [ "$EUID" -ne 0 ]; then
   echo "This script must be run as root. Try running with sudo."
   exit 1
@@ -90,8 +92,8 @@ EOS
 
 chmod +x ${HID_SCRIPT_PATH}
 
-# 3. Create the systemd service unit file for USB gadget.
-SERVICE_PATH="/lib/systemd/system/usb-gadget.service"
+# 3. Create the systemd service unit file for the HID gadget.
+SERVICE_PATH="/etc/systemd/system/usb-gadget.service"
 cat << 'EOF' > ${SERVICE_PATH}
 [Unit]
 Description=Create virtual keyboard USB gadget
@@ -146,7 +148,7 @@ chmod 700 /usr/local/bin/update_wifi.sh
 
 # Configure sudoers to allow user "pi" to run update_wifi.sh without a password.
 echo "Configuring sudoers for update_wifi.sh..."
-echo "pi ALL=(root) NOPASSWD: /usr/local/bin/update_wifi.sh" > /etc/sudoers.d/update_wifi
+echo "ed ALL=(root) NOPASSWD: /usr/local/bin/update_wifi.sh" > /etc/sudoers.d/update_wifi
 chmod 440 /etc/sudoers.d/update_wifi
 
 ##################################################

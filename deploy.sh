@@ -3,10 +3,7 @@
 # This script installs required packages, deploys needed files (setup-usb-hid.sh, update_wifi.sh,
 # wifi_fallback.sh, app.py, HTML templates), creates systemd services, and configures sudoers.
 #
-# It uses the current user (determined by id -un and id -gn) rather than hardcoding "pi".
-#
-# Run via:
-#   curl https://your-domain/path/to/deploy.sh | sudo bash
+# It uses the current user (determined by logname/SUDO_USER) rather than hardcoding "pi".
 #
 # IMPORTANT: Review this script before running it.
 
@@ -18,7 +15,7 @@ if [ "$EUID" -ne 0 ]; then
   exit 1
 fi
 
-# Get the current (non-root) user who invoked sudo.
+# Determine the non-root user invoking sudo.
 CURRENT_USER=$(logname 2>/dev/null || echo "${SUDO_USER:-$(id -un)}")
 CURRENT_GROUP=$(id -gn "$CURRENT_USER")
 echo "Deploying as user: ${CURRENT_USER} (group: ${CURRENT_GROUP})"
@@ -55,7 +52,7 @@ fi
 
 # 2. Create the HID initialization script at /opt/enable-rpi-hid.
 HID_SCRIPT_PATH="/opt/enable-rpi-hid"
-cat << 'EOS' > ${HID_SCRIPT_PATH}
+cat << 'EOS' > "$HID_SCRIPT_PATH"
 #!/usr/bin/env bash
 set -e
 set -u
@@ -100,11 +97,11 @@ ls /sys/class/udc > UDC
 chmod 777 /dev/hidg0
 EOS
 
-chmod +x ${HID_SCRIPT_PATH}
+chmod +x "$HID_SCRIPT_PATH"
 
 # 3. Create the systemd service unit file for the HID gadget.
 SERVICE_PATH="/etc/systemd/system/usb-gadget.service"
-cat << 'EOF' > ${SERVICE_PATH}
+cat << 'EOF' > "$SERVICE_PATH"
 [Unit]
 Description=Create virtual keyboard USB gadget
 After=syslog.target
@@ -119,8 +116,8 @@ WantedBy=local-fs.target
 EOF
 
 # Check that the unit file exists.
-if [ ! -f "${SERVICE_PATH}" ]; then
-  echo "Error: ${SERVICE_PATH} was not created."
+if [ ! -f "$SERVICE_PATH" ]; then
+  echo "Error: $SERVICE_PATH was not created."
   exit 1
 fi
 

@@ -33,9 +33,9 @@ After=network.target
 # Run as the pi user (or another appropriate user).
 User=pi
 Group=pi
-WorkingDirectory=/home/pi/hid_flask
+WorkingDirectory=/usr/local/bin
 # Adjust the path to your Python interpreter and app.py location.
-ExecStart=/usr/bin/python3 app.py
+ExecStart=/usr/bin/python3 /usr/local/bin/app.py
 Restart=always
 # Optionally set environment variables if needed
 # Environment="FLASK_APP=app.py"

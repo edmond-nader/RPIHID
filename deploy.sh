@@ -1,9 +1,14 @@
 #!/bin/bash
 # deploy.sh - Auto deploy script for Raspberry Pi HID keyboard with Wi-Fi configuration and fallback.
-# This script installs required packages, deploys all needed files (setup-usb-hid.sh, update_wifi.sh,
-# wifi_fallback.sh, app.py, HTML templates), and creates systemd services.
+# This script installs required packages, deploys needed files (setup-usb-hid.sh, update_wifi.sh,
+# wifi_fallback.sh, app.py, HTML templates), creates systemd services, and configures sudoers.
 #
-# Review the script before running it to ensure security.
+# It uses the current user (determined by id -un and id -gn) rather than hardcoding "pi".
+#
+# Run via:
+#   curl https://your-domain/path/to/deploy.sh | sudo bash
+#
+# IMPORTANT: Review this script before running it.
 
 set -euo pipefail
 
@@ -12,6 +17,11 @@ if [ "$EUID" -ne 0 ]; then
   echo "This script must be run as root. Try running with sudo."
   exit 1
 fi
+
+# Get the current (non-root) user who invoked sudo.
+CURRENT_USER=$(logname 2>/dev/null || echo "${SUDO_USER:-$(id -un)}")
+CURRENT_GROUP=$(id -gn "$CURRENT_USER")
+echo "Deploying as user: ${CURRENT_USER} (group: ${CURRENT_GROUP})"
 
 echo "Starting deployment..."
 
@@ -108,9 +118,15 @@ ExecStart=/opt/enable-rpi-hid
 WantedBy=local-fs.target
 EOF
 
+# Check that the unit file exists.
+if [ ! -f "${SERVICE_PATH}" ]; then
+  echo "Error: ${SERVICE_PATH} was not created."
+  exit 1
+fi
+
 # 4. Reload systemd daemon and enable the usb-gadget service.
 systemctl daemon-reload
-systemctl enable usb-gadget.service
+systemctl enable usb-gadget.service || { echo "Failed to enable usb-gadget.service"; exit 1; }
 
 echo "setup-usb-hid.sh deployed. (Reboot required for HID changes to take effect.)"
 
@@ -146,9 +162,9 @@ EOF
 chown root:root /usr/local/bin/update_wifi.sh
 chmod 700 /usr/local/bin/update_wifi.sh
 
-# Configure sudoers to allow user "pi" to run update_wifi.sh without a password.
+# Configure sudoers to allow the current user to run update_wifi.sh without a password.
 echo "Configuring sudoers for update_wifi.sh..."
-echo "ed ALL=(root) NOPASSWD: /usr/local/bin/update_wifi.sh" > /etc/sudoers.d/update_wifi
+echo "${CURRENT_USER} ALL=(root) NOPASSWD: /usr/local/bin/update_wifi.sh" > /etc/sudoers.d/update_wifi
 chmod 440 /etc/sudoers.d/update_wifi
 
 ##################################################
@@ -864,14 +880,14 @@ EOF
 # 7. Create systemd service for Flask app.
 ##################################################
 echo "Creating systemd service for Flask HID app..."
-cat << 'EOF' > /etc/systemd/system/flask-hid.service
+cat << EOF > /etc/systemd/system/flask-hid.service
 [Unit]
 Description=Flask HID Keyboard Service
 After=network.target
 
 [Service]
-User=pi
-Group=pi
+User=${CURRENT_USER}
+Group=${CURRENT_GROUP}
 WorkingDirectory=/usr/local/bin
 ExecStart=/usr/bin/python3 /usr/local/bin/app.py
 Restart=always

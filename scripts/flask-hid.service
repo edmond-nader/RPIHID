@@ -1,0 +1,13 @@
+[Unit]
+Description=Flask HID Keyboard Service for user %i
+After=network.target
+
+[Service]
+User=%i
+Group=%i
+WorkingDirectory=/usr/local/bin
+ExecStart=/usr/bin/python3 /usr/local/bin/app.py
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

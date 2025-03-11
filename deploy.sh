@@ -5,8 +5,9 @@
 # 2. Cloning the repository if needed.
 # 3. Copying files to their proper system locations.
 # 4. Setting permissions.
-# 5. Updating DHCP configuration for the AP virtual interface.
-# 6. Reloading systemd and enabling required services.
+# 5. Updating DHCP configuration for the AP virtual interface (uap0).
+# 6. Ensuring the USB HID gadget is set up.
+# 7. Reloading systemd and enabling required services.
 #
 # This solution sets up the Pi to run concurrently as a Wi‑Fi client (wlan0)
 # and as an Access Point (AP) on a virtual interface (uap0). The AP (SSID "MyRPZ")
@@ -51,7 +52,7 @@ fi
 ###############################
 # 3. Define Repository Directory
 ###############################
-# If BASH_SOURCE is not set, fallback to pwd.
+# Use BASH_SOURCE if available; otherwise fall back to current directory.
 if [ -n "${BASH_SOURCE:-}" ]; then
     REPO_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 else
@@ -92,7 +93,7 @@ for file in "${required_files[@]}"; do
 done
 echo "All required core files are present."
 
-# For the virtual interface creation files, warn if missing.
+# Warn for virtual interface creation files (for concurrent AP/client mode).
 if [ ! -f "${REPO_DIR}/scripts/create_uap0.sh" ]; then
     echo "Warning: ${REPO_DIR}/scripts/create_uap0.sh not found."
     echo "For concurrent AP/client mode, please add this file to your repository."
@@ -173,7 +174,18 @@ fi
 echo "/etc/dhcpcd.conf updated."
 
 ###############################
-# 7. Reload systemd and Enable Services
+# 7. Ensure USB HID Gadget is Set Up
+###############################
+# Check if /dev/hidg0 exists; if not, run the USB HID setup script.
+if [ ! -e /dev/hidg0 ]; then
+    echo "/dev/hidg0 not found. Running setup-usb-hid.sh to initialize USB HID gadget..."
+    /usr/local/bin/setup-usb-hid.sh
+else
+    echo "/dev/hidg0 found."
+fi
+
+###############################
+# 8. Reload systemd and Enable Services
 ###############################
 echo "Reloading systemd daemon..."
 systemctl daemon-reload

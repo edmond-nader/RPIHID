@@ -2,13 +2,14 @@
 from flask import Flask, render_template, request, jsonify
 import time
 import subprocess
+import re
 
 app = Flask(__name__)
 
-# Mapping of keys to HID key codes (scan codes)
-# Each key is defined as a tuple: (modifier, key_code)
+# --------------------
+# HID Keyboard Part
+# --------------------
 KEY_MAP = {
-    # Function Keys
     "f1": (0x00, 0x3A),
     "f2": (0x00, 0x3B),
     "f3": (0x00, 0x3C),
@@ -21,7 +22,6 @@ KEY_MAP = {
     "f10": (0x00, 0x43),
     "f11": (0x00, 0x44),
     "f12": (0x00, 0x45),
-    # Numbers
     "1": (0x00, 0x1E),
     "2": (0x00, 0x1F),
     "3": (0x00, 0x20),
@@ -32,7 +32,6 @@ KEY_MAP = {
     "8": (0x00, 0x25),
     "9": (0x00, 0x26),
     "0": (0x00, 0x27),
-    # Letters
     "q": (0x00, 0x14),
     "w": (0x00, 0x1A),
     "e": (0x00, 0x08),
@@ -59,13 +58,11 @@ KEY_MAP = {
     "b": (0x00, 0x05),
     "n": (0x00, 0x11),
     "m": (0x00, 0x10),
-    # Control Keys
     "enter": (0x00, 0x28),
     "esc": (0x00, 0x29),
     "backspace": (0x00, 0x2A),
     "tab": (0x00, 0x2B),
     "space": (0x00, 0x2C),
-    # Arrow Keys
     "up": (0x00, 0x52),
     "down": (0x00, 0x51),
     "left": (0x00, 0x50),
@@ -75,12 +72,8 @@ KEY_MAP = {
 HID_DEVICE = "/dev/hidg0"
 
 def send_hid_report(modifier, key_code):
-    """
-    Send an 8-byte HID report for the keyboard.
-    Report format: [modifier, reserved, key1, key2, key3, key4, key5, key6]
-    """
     press_report = bytes([modifier, 0x00, key_code, 0x00, 0x00, 0x00, 0x00, 0x00])
-    release_report = bytes(8)  # Key release report
+    release_report = bytes(8)
     try:
         with open(HID_DEVICE, "wb") as fd:
             fd.write(press_report)
@@ -111,9 +104,48 @@ def send_key():
 def ping():
     return "pong", 200
 
-# Global dictionary to track shutdown attempts per IP.
+# --------------------
+# Wi‑Fi Configuration Endpoints
+# --------------------
+@app.route("/wifi_config")
+def wifi_config():
+    return render_template("wifi_config.html")
+
+@app.route("/scan_wifi")
+def scan_wifi():
+    try:
+        output = subprocess.check_output(["sudo", "iwlist", "wlan0", "scan"], universal_newlines=True)
+        ssids = re.findall(r'ESSID:"([^"]+)"', output)
+        ssids = list(set(ssids))
+        return jsonify({"networks": ssids})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/connect_wifi", methods=["POST"])
+def connect_wifi():
+    ssid = request.form.get("ssid")
+    password = request.form.get("password")
+    if not ssid or not password:
+        return jsonify({"success": False, "error": "SSID and password required"}), 400
+    try:
+        subprocess.check_call(["sudo", "/usr/local/bin/update_wifi.sh", ssid, password])
+        subprocess.check_call(["sudo", "wpa_cli", "-i", "wlan0", "reconfigure"])
+        time.sleep(10)
+        output = subprocess.check_output(["/sbin/ip", "addr", "show", "wlan0"], universal_newlines=True)
+        if "inet " in output:
+            subprocess.call(["sudo", "systemctl", "stop", "hostapd"])
+            subprocess.call(["sudo", "systemctl", "stop", "dnsmasq"])
+            return jsonify({"success": True, "message": "Connected to Wi‑Fi network."})
+        else:
+            return jsonify({"success": False, "error": "Connection failed, hotspot mode remains active."}), 500
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+# --------------------
+# Shutdown Endpoint (for completeness)
+# --------------------
 shutdown_attempts = {}
-COOLDOWN_PERIOD = 60  # seconds
+COOLDOWN_PERIOD = 60
 MAX_ATTEMPTS = 3
 
 @app.route("/shutdown", methods=["POST"])
@@ -125,7 +157,6 @@ def shutdown():
         wait_time = int(attempts["lock_until"] - now)
         return jsonify({"success": False, "error": f"Too many attempts. Please wait {wait_time} seconds."}), 429
     token = request.form.get("token")
-    # Validate token (replace with your secure token or load from env variable)
     if token != "MY_SHUTDOWN_TOKEN":
         attempts["count"] = attempts.get("count", 0) + 1
         if attempts["count"] >= MAX_ATTEMPTS:

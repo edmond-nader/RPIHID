@@ -1,10 +1,11 @@
 [Unit]
-Description=Create virtual AP interface uap0
+Description=Create Virtual AP Interface uap0
 After=network.target
 
 [Service]
 Type=oneshot
 ExecStart=/usr/local/bin/create_uap0.sh
+RemainAfterExit=true
 
 [Install]
 WantedBy=multi-user.target

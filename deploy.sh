@@ -10,8 +10,7 @@
 #
 # This solution sets up the Pi to run concurrently as a Wi‑Fi client (wlan0)
 # and as an Access Point (AP) on a virtual interface (uap0). The AP (SSID "MyRPZ")
-# is always enabled on boot, and you can disable/enable it manually via buttons
-# in the web interface.
+# is always enabled on boot, and you have buttons in the web interface to disable/enable it.
 #
 # Run with:
 #   curl https://raw.githubusercontent.com/edmond-nader/RPIHID/refs/heads/testing/deploy.sh | sudo bash
@@ -52,9 +51,8 @@ fi
 ###############################
 # 3. Define Repository Directory
 ###############################
-# Determine REPO_DIR from where this script resides.
-# When running via curl, $0 may not be set correctly.
-if [ -n "${BASH_SOURCE[0]:-}" ]; then
+# If BASH_SOURCE is not set, fallback to pwd.
+if [ -n "${BASH_SOURCE:-}" ]; then
     REPO_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 else
     REPO_DIR="$(pwd)"
@@ -94,7 +92,7 @@ for file in "${required_files[@]}"; do
 done
 echo "All required core files are present."
 
-# Warn for virtual interface creation files (for concurrent AP/client mode).
+# For the virtual interface creation files, warn if missing.
 if [ ! -f "${REPO_DIR}/scripts/create_uap0.sh" ]; then
     echo "Warning: ${REPO_DIR}/scripts/create_uap0.sh not found."
     echo "For concurrent AP/client mode, please add this file to your repository."
@@ -198,8 +196,8 @@ if systemctl list-unit-files | grep -q "^dnsmasq.service"; then
     systemctl enable dnsmasq
     systemctl restart dnsmasq
 else
-    echo "dnsmasq.service not found. Restarting using service command..."
-    service dnsmasq restart
+    echo "dnsmasq.service not found. Restarting using legacy service command..."
+    service dnsmasq restart || echo "Warning: dnsmasq could not be restarted."
 fi
 
 CURRENT_USER="$(logname)"

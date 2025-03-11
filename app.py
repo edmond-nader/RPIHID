@@ -1,8 +1,6 @@
 #!/usr/bin/env python3
 from flask import Flask, render_template, request, jsonify
-import time
-import subprocess
-import re
+import time, subprocess, re
 
 app = Flask(__name__)
 
@@ -68,11 +66,10 @@ KEY_MAP = {
     "left": (0x00, 0x50),
     "right": (0x00, 0x4F)
 }
-
 HID_DEVICE = "/dev/hidg0"
 
 def send_hid_report(modifier, key_code):
-    press_report = bytes([modifier, 0x00, key_code, 0x00, 0x00, 0x00, 0x00, 0x00])
+    press_report = bytes([modifier, 0x00, key_code, 0,0,0,0,0])
     release_report = bytes(8)
     try:
         with open(HID_DEVICE, "wb") as fd:
@@ -107,20 +104,6 @@ def ping():
 # --------------------
 # Wi‑Fi Configuration Endpoints
 # --------------------
-@app.route("/wifi_config")
-def wifi_config():
-    return render_template("wifi_config.html")
-
-@app.route("/scan_wifi")
-def scan_wifi():
-    try:
-        output = subprocess.check_output(["sudo", "iwlist", "wlan0", "scan"], universal_newlines=True)
-        ssids = re.findall(r'ESSID:"([^"]+)"', output)
-        ssids = list(set(ssids))
-        return jsonify({"networks": ssids})
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
 @app.route("/connect_wifi", methods=["POST"])
 def connect_wifi():
     ssid = request.form.get("ssid")
@@ -133,43 +116,32 @@ def connect_wifi():
         time.sleep(10)
         output = subprocess.check_output(["/sbin/ip", "addr", "show", "wlan0"], universal_newlines=True)
         if "inet " in output:
-            subprocess.call(["sudo", "systemctl", "stop", "hostapd"])
-            subprocess.call(["sudo", "systemctl", "stop", "dnsmasq"])
             return jsonify({"success": True, "message": "Connected to Wi‑Fi network."})
         else:
-            return jsonify({"success": False, "error": "Connection failed, hotspot mode remains active."}), 500
+            return jsonify({"success": False, "error": "Connection failed."}), 500
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
 
 # --------------------
-# Shutdown Endpoint (for completeness)
+# Hotspot Control Endpoints
 # --------------------
-shutdown_attempts = {}
-COOLDOWN_PERIOD = 60
-MAX_ATTEMPTS = 3
-
-@app.route("/shutdown", methods=["POST"])
-def shutdown():
-    ip = request.remote_addr
-    now = time.time()
-    attempts = shutdown_attempts.get(ip, {"count": 0, "lock_until": 0})
-    if now < attempts.get("lock_until", 0):
-        wait_time = int(attempts["lock_until"] - now)
-        return jsonify({"success": False, "error": f"Too many attempts. Please wait {wait_time} seconds."}), 429
-    token = request.form.get("token")
-    if token != "MY_SHUTDOWN_TOKEN":
-        attempts["count"] = attempts.get("count", 0) + 1
-        if attempts["count"] >= MAX_ATTEMPTS:
-            attempts["lock_until"] = now + COOLDOWN_PERIOD
-            attempts["count"] = 0
-        shutdown_attempts[ip] = attempts
-        return jsonify({"success": False, "error": "Unauthorized"}), 403
-    shutdown_attempts[ip] = {"count": 0, "lock_until": 0}
+@app.route("/disable_hotspot", methods=["POST"])
+def disable_hotspot():
     try:
-        subprocess.call(["sudo", "shutdown", "-h", "now"])
-        return jsonify({"success": True, "message": "System shutting down..."}), 200
+        subprocess.check_call(["sudo", "systemctl", "stop", "hostapd"])
+        subprocess.check_call(["sudo", "systemctl", "stop", "dnsmasq"])
+        return jsonify({"success": True, "message": "Hotspot disabled."})
     except Exception as e:
-        return jsonify({"success": False, "error": f"Shutdown failed: {e}"}), 500
+        return jsonify({"success": False, "error": str(e)}), 500
+
+@app.route("/enable_hotspot", methods=["POST"])
+def enable_hotspot():
+    try:
+        subprocess.check_call(["sudo", "systemctl", "start", "hostapd"])
+        subprocess.check_call(["sudo", "systemctl", "start", "dnsmasq"])
+        return jsonify({"success": True, "message": "Hotspot enabled."})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)

@@ -3,17 +3,23 @@
 # This script deploys the RPIHID project by:
 # 1. Installing missing dependencies.
 # 2. Cloning the repository if needed.
-# 3. Copying files to the proper locations.
+# 3. Copying files to their proper system locations.
 # 4. Setting permissions.
-# 5. Enabling systemd services.
+# 5. Updating DHCP configuration for the AP virtual interface.
+# 6. Reloading systemd and enabling required services.
+#
+# This solution sets up the Pi to run concurrently as a Wi‑Fi client (wlan0)
+# and as an Access Point (AP) on a virtual interface (uap0). The AP (SSID "MyRPZ")
+# is always enabled on boot, and you can disable/enable it manually via buttons
+# in the web interface.
 #
 # Run with:
-#   curl https://raw.githubusercontent.com/edmond-nader/RPIHID/refs/heads/main/deploy.sh | sudo bash
+#   curl https://raw.githubusercontent.com/edmond-nader/RPIHID/refs/heads/testing/deploy.sh | sudo bash
 
 set -euo pipefail
 
 ###############################
-# 1. Root and apt-get Check
+# 1. Ensure Running as Root and apt-get Availability
 ###############################
 if [ "$EUID" -ne 0 ]; then
     echo "Please run this script with sudo."
@@ -26,7 +32,7 @@ if ! command -v apt-get >/dev/null 2>&1; then
 fi
 
 ###############################
-# 2. Install Dependencies
+# 2. Install Missing Dependencies
 ###############################
 deps=(hostapd dnsmasq iw python3 curl git dos2unix)
 missing=()
@@ -47,12 +53,18 @@ fi
 # 3. Define Repository Directory
 ###############################
 # Determine REPO_DIR from where this script resides.
-REPO_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+# When running via curl, $0 may not be set correctly.
+if [ -n "${BASH_SOURCE[0]:-}" ]; then
+    REPO_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+else
+    REPO_DIR="$(pwd)"
+fi
 echo "Initial repository directory: ${REPO_DIR}"
 
 # If essential files aren’t found, clone the repository.
 if [ ! -f "${REPO_DIR}/app.py" ]; then
-    echo "Essential files not found. Cloning repository..."
+    echo "Essential files not found in ${REPO_DIR}."
+    echo "Cloning repository from GitHub..."
     REPO_URL="https://github.com/edmond-nader/RPIHID.git"
     TEMP_DIR=$(mktemp -d)
     git clone "${REPO_URL}" "${TEMP_DIR}" -b testing
@@ -70,8 +82,6 @@ required_files=(
     "templates/wifi_config.html"
     "scripts/flask-hid@.service"
     "scripts/update_wifi.sh"
-    "scripts/create_uap0.sh"
-    "scripts/create-uap0.service"
     "configs/hostapd.conf"
     "configs/hostapd"
     "configs/ap-dnsmasq.conf"
@@ -82,7 +92,17 @@ for file in "${required_files[@]}"; do
         exit 1
     fi
 done
-echo "All required files are present."
+echo "All required core files are present."
+
+# Warn for virtual interface creation files (for concurrent AP/client mode).
+if [ ! -f "${REPO_DIR}/scripts/create_uap0.sh" ]; then
+    echo "Warning: ${REPO_DIR}/scripts/create_uap0.sh not found."
+    echo "For concurrent AP/client mode, please add this file to your repository."
+fi
+if [ ! -f "${REPO_DIR}/scripts/create-uap0.service" ]; then
+    echo "Warning: ${REPO_DIR}/scripts/create-uap0.service not found."
+    echo "For concurrent AP/client mode, please add this file to your repository."
+fi
 
 ###############################
 # 5. Deploy Files
@@ -114,12 +134,20 @@ cp "${REPO_DIR}/scripts/update_wifi.sh" "${INSTALL_PREFIX}/update_wifi.sh"
 chmod 700 "${INSTALL_PREFIX}/update_wifi.sh"
 chown root:root "${INSTALL_PREFIX}/update_wifi.sh"
 
-echo "Deploying create_uap0.sh..."
-cp "${REPO_DIR}/scripts/create_uap0.sh" "${INSTALL_PREFIX}/create_uap0.sh"
-chmod +x "${INSTALL_PREFIX}/create_uap0.sh"
+if [ -f "${REPO_DIR}/scripts/create_uap0.sh" ]; then
+    echo "Deploying create_uap0.sh..."
+    cp "${REPO_DIR}/scripts/create_uap0.sh" "${INSTALL_PREFIX}/create_uap0.sh"
+    chmod +x "${INSTALL_PREFIX}/create_uap0.sh"
+else
+    echo "Skipping create_uap0.sh (not found)."
+fi
 
-echo "Deploying create-uap0.service..."
-cp "${REPO_DIR}/scripts/create-uap0.service" "${SYSTEMD_DIR}/create-uap0.service"
+if [ -f "${REPO_DIR}/scripts/create-uap0.service" ]; then
+    echo "Deploying create-uap0.service..."
+    cp "${REPO_DIR}/scripts/create-uap0.service" "${SYSTEMD_DIR}/create-uap0.service"
+else
+    echo "Skipping create-uap0.service (not found)."
+fi
 
 echo "Deploying hostapd.conf..."
 mkdir -p "${HOSTAPD_CONF_DIR}"
@@ -152,21 +180,28 @@ echo "/etc/dhcpcd.conf updated."
 echo "Reloading systemd daemon..."
 systemctl daemon-reload
 
-echo "Enabling create-uap0.service..."
-systemctl enable create-uap0.service
-systemctl start create-uap0.service
+if systemctl list-unit-files | grep -q "create-uap0.service"; then
+    echo "Enabling create-uap0.service..."
+    systemctl enable create-uap0.service
+    systemctl start create-uap0.service
+else
+    echo "create-uap0.service not deployed. Skipping."
+fi
 
-# Enable hostapd and dnsmasq (assume they are installed from packages)
 echo "Enabling hostapd..."
 systemctl unmask hostapd
 systemctl enable hostapd
 systemctl restart hostapd
 
 echo "Enabling dnsmasq..."
-systemctl enable dnsmasq
-systemctl restart dnsmasq
+if systemctl list-unit-files | grep -q "^dnsmasq.service"; then
+    systemctl enable dnsmasq
+    systemctl restart dnsmasq
+else
+    echo "dnsmasq.service not found. Restarting using service command..."
+    service dnsmasq restart
+fi
 
-# Enable flask-hid instance for the current login user
 CURRENT_USER="$(logname)"
 echo "Enabling flask-hid@${CURRENT_USER}.service..."
 systemctl enable flask-hid@${CURRENT_USER}.service

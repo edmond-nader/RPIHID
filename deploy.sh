@@ -55,7 +55,7 @@ if [ ! -f "${REPO_DIR}/app.py" ]; then
     echo "Essential files not found. Cloning repository..."
     REPO_URL="https://github.com/edmond-nader/RPIHID.git"
     TEMP_DIR=$(mktemp -d)
-    git clone "${REPO_URL}" "${TEMP_DIR}" -b testing
+    git clone "${REPO_URL}" "${TEMP_DIR}"
     REPO_DIR="${TEMP_DIR}"
     echo "Repository cloned to ${REPO_DIR}."
 fi

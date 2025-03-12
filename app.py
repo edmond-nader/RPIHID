@@ -89,6 +89,19 @@ def connect_wifi():
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
 
+@app.route("/scan_wifi")
+def scan_wifi():
+    try:
+        # Run the scan command; may require sudo privileges.
+        output = subprocess.check_output(["sudo", "iwlist", "wlan0", "scan"], universal_newlines=True)
+        # Use regex to extract ESSIDs.
+        ssids = re.findall(r'ESSID:"([^"]+)"', output)
+        # Remove empty entries and duplicates.
+        ssids = list(set([s for s in ssids if s]))
+        return jsonify({"networks": ssids})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 # --------------------
 # Hotspot Control Endpoints
 # --------------------

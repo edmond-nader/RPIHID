@@ -1,8 +1,6 @@
 #!/usr/bin/env python3
 from flask import Flask, render_template, request, jsonify
-import time
-import subprocess
-import re
+import time, subprocess, re
 
 app = Flask(__name__)
 

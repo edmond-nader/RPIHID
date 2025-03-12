@@ -1,16 +1,18 @@
 #!/usr/bin/env bash
 # setup-usb-hid.sh
-# (Your existing code that sets up the Raspberry Pi as a USB HID keyboard)
+# This script sets up the Raspberry Pi as a USB HID keyboard.
 set -x
 set -e
 set -u
-# Enable dwc2 overlay and module
+
+# Enable dwc2 overlay and module.
 if ! grep -q 'dtoverlay=dwc2' /boot/config.txt; then
   echo "dtoverlay=dwc2" >> /boot/config.txt
 fi
 if ! grep -q '^dwc2' /etc/modules; then
   echo "dwc2" >> /etc/modules
 fi
+
 HID_SCRIPT_PATH="/opt/enable-rpi-hid"
 cat << 'EOF' > ${HID_SCRIPT_PATH}
 #!/usr/bin/env bash
@@ -47,18 +49,22 @@ ls /sys/class/udc > UDC
 chmod 777 /dev/hidg0
 EOF
 chmod +x ${HID_SCRIPT_PATH}
+
 SERVICE_PATH="/lib/systemd/system/usb-gadget.service"
 cat << 'EOF' > ${SERVICE_PATH}
 [Unit]
 Description=Create virtual keyboard USB gadget
 After=syslog.target
+
 [Service]
 Type=oneshot
 User=root
 ExecStart=/opt/enable-rpi-hid
+
 [Install]
 WantedBy=local-fs.target
 EOF
+
 systemctl daemon-reload
 systemctl enable usb-gadget.service
 echo "Setup complete. Please reboot your system for changes to take effect."

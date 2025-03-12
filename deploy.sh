@@ -215,7 +215,7 @@ systemctl enable hostapd
 systemctl restart hostapd
 
 echo "Enabling dnsmasq..."
-if systemctl list-unit-files | grep -q "^dnsmasq.service"; then
+if systemctl list-unit-files --type=service | grep -E -q '^dnsmasq\.service'; then
     systemctl enable dnsmasq
     systemctl restart dnsmasq
 else

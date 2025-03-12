@@ -12,7 +12,7 @@
 # 8. Reloading systemd and enabling required services.
 #
 # The system is configured to operate concurrently as a Wi-Fi client on wlan0
-# and as an Access Point on a virtual interface (uap0) with a static IP of 192.168.4.1.
+# and as an Access Point on virtual interface uap0 with a static IP of 192.168.4.1.
 # The AP (SSID "MyRPZ") is always enabled on boot, and the web interface includes
 # buttons for Wi-Fi configuration and hotspot control.
 #
@@ -85,6 +85,7 @@ required_files=(
     "configs/hostapd.conf"
     "configs/hostapd"
     "configs/ap-dnsmasq.conf"
+    "configs/dnsmasq.service"
 )
 for file in "${required_files[@]}"; do
     if [ ! -f "${REPO_DIR}/$file" ]; then
@@ -165,6 +166,9 @@ echo "Deploying ap-dnsmasq.conf..."
 mkdir -p "${DNSMASQ_CONF_DIR}"
 cp "${REPO_DIR}/configs/ap-dnsmasq.conf" "${DNSMASQ_CONF_DIR}/ap-dnsmasq.conf"
 
+echo "Deploying dnsmasq.service..."
+cp "${REPO_DIR}/configs/dnsmasq.service" "${SYSTEMD_DIR}/dnsmasq.service"
+
 ###############################
 # 6. Update /etc/dhcpcd.conf for uap0
 ###############################
@@ -194,7 +198,6 @@ fi
 echo "Reloading systemd daemon..."
 systemctl daemon-reload
 
-# Check for create-uap0.service; if not present, run the create_uap0.sh script directly.
 if [ -f "/etc/systemd/system/create-uap0.service" ]; then
     echo "Enabling create-uap0.service..."
     systemctl enable create-uap0.service
@@ -216,8 +219,9 @@ if systemctl list-unit-files | grep -q "^dnsmasq.service"; then
     systemctl enable dnsmasq
     systemctl restart dnsmasq
 else
-    echo "dnsmasq.service not found. Restarting using legacy service command..."
-    service dnsmasq restart || echo "Warning: dnsmasq could not be restarted."
+    echo "dnsmasq.service not found. Enabling deployed dnsmasq.service..."
+    systemctl enable dnsmasq.service
+    systemctl restart dnsmasq.service
 fi
 
 CURRENT_USER="$(logname)"

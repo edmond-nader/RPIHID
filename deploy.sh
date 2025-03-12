@@ -194,12 +194,16 @@ fi
 echo "Reloading systemd daemon..."
 systemctl daemon-reload
 
-if systemctl list-unit-files | grep -q "create-uap0.service"; then
+# Check for create-uap0.service; if not present, run the create_uap0.sh script directly.
+if [ -f "/etc/systemd/system/create-uap0.service" ]; then
     echo "Enabling create-uap0.service..."
     systemctl enable create-uap0.service
     systemctl start create-uap0.service
+elif [ -f "${INSTALL_PREFIX}/create_uap0.sh" ]; then
+    echo "create-uap0.service not found, but create_uap0.sh exists. Running it directly..."
+    /usr/local/bin/create_uap0.sh
 else
-    echo "create-uap0.service not deployed. Skipping."
+    echo "Virtual interface creation file not found. Skipping."
 fi
 
 echo "Enabling hostapd..."

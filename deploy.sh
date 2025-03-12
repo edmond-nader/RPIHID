@@ -4,15 +4,17 @@
 # This script deploys the RPIHID project by:
 # 1. Installing missing dependencies.
 # 2. Cloning the repository if essential files are not found.
-# 3. Verifying that required files are present (including the wifi_config endpoint).
+# 3. Verifying that required files are present (including the /wifi_config endpoint).
 # 4. Copying files to their proper system locations.
 # 5. Setting permissions.
 # 6. Updating /etc/dhcpcd.conf for the virtual AP interface (uap0).
 # 7. Ensuring the USB HID gadget is set up.
 # 8. Reloading systemd and enabling required services.
 #
-# The system is configured to run concurrently as a Wi-Fi client (wlan0) and as an Access Point (AP) on virtual interface uap0.
-# The AP (SSID "MyRPZ") is always enabled on boot, and the web interface (keyboard.html) includes buttons for hotspot control.
+# The system is configured to operate concurrently as a Wi-Fi client on wlan0
+# and as an Access Point on a virtual interface (uap0) with a static IP of 192.168.4.1.
+# The AP (SSID "MyRPZ") is always enabled on boot, and the web interface includes
+# buttons for Wi-Fi configuration and hotspot control.
 #
 # Run with:
 #   curl https://raw.githubusercontent.com/edmond-nader/RPIHID/refs/heads/testing/deploy.sh | sudo bash
@@ -65,7 +67,7 @@ if [ ! -f "${REPO_DIR}/app.py" ]; then
     echo "Cloning repository from GitHub..."
     REPO_URL="https://github.com/edmond-nader/RPIHID.git"
     TEMP_DIR=$(mktemp -d)
-    git clone "${REPO_URL}" "${TEMP_DIR}" -b testing
+    git clone "${REPO_URL}" "${TEMP_DIR}"
     REPO_DIR="${TEMP_DIR}"
     echo "Repository cloned to ${REPO_DIR}."
 fi

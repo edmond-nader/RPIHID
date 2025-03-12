@@ -3,18 +3,16 @@
 #
 # This script deploys the RPIHID project by:
 # 1. Installing missing dependencies.
-# 2. Cloning the repository if needed.
-# 3. Verifying that required files are present (including a check that app.py includes a wifi_config endpoint).
+# 2. Cloning the repository if essential files are not found.
+# 3. Verifying that required files are present (including the wifi_config endpoint).
 # 4. Copying files to their proper system locations.
 # 5. Setting permissions.
-# 6. Updating DHCP configuration for the AP virtual interface (uap0).
+# 6. Updating /etc/dhcpcd.conf for the virtual AP interface (uap0).
 # 7. Ensuring the USB HID gadget is set up.
 # 8. Reloading systemd and enabling required services.
 #
-# This solution sets up the Pi to run concurrently as a Wi‑Fi client (wlan0)
-# and as an Access Point (AP) on a virtual interface (uap0). The AP (SSID "MyRPZ")
-# is always enabled on boot, and the web interface (keyboard.html) includes a button
-# to access Wi‑Fi configuration (/wifi_config) as well as buttons to enable/disable the AP.
+# The system is configured to run concurrently as a Wi-Fi client (wlan0) and as an Access Point (AP) on virtual interface uap0.
+# The AP (SSID "MyRPZ") is always enabled on boot, and the web interface (keyboard.html) includes buttons for hotspot control.
 #
 # Run with:
 #   curl https://raw.githubusercontent.com/edmond-nader/RPIHID/refs/heads/testing/deploy.sh | sudo bash
@@ -44,7 +42,6 @@ for dep in "${deps[@]}"; do
         missing+=("$dep")
     fi
 done
-
 if [ ${#missing[@]} -gt 0 ]; then
     echo "Installing missing dependencies: ${missing[*]}"
     apt-get update
@@ -56,7 +53,6 @@ fi
 ###############################
 # 3. Define Repository Directory
 ###############################
-# Try to use BASH_SOURCE if available, otherwise fallback to current directory.
 if [ -n "${BASH_SOURCE:-}" ]; then
     REPO_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 else
@@ -64,7 +60,6 @@ else
 fi
 echo "Initial repository directory: ${REPO_DIR}"
 
-# If essential files aren’t found, clone the repository.
 if [ ! -f "${REPO_DIR}/app.py" ]; then
     echo "Essential files not found in ${REPO_DIR}."
     echo "Cloning repository from GitHub..."
@@ -97,13 +92,11 @@ for file in "${required_files[@]}"; do
 done
 echo "All required core files are present."
 
-# Check that app.py contains a wifi_config endpoint.
 if ! grep -q "def wifi_config(" "${REPO_DIR}/app.py"; then
     echo "Warning: app.py does not appear to contain a 'wifi_config' endpoint."
     echo "Please ensure your app.py defines a route for /wifi_config."
 fi
 
-# Warn for virtual interface creation files.
 if [ ! -f "${REPO_DIR}/scripts/create_uap0.sh" ]; then
     echo "Warning: ${REPO_DIR}/scripts/create_uap0.sh not found."
     echo "For concurrent AP/client mode, please add this file to your repository."

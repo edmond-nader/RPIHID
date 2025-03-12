@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # setup-usb-hid.sh
-# This script sets up the Raspberry Pi as a USB HID keyboard.
+# Sets up the Raspberry Pi as a USB HID keyboard.
 set -x
 set -e
 set -u

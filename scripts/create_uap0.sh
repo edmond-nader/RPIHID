@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 # create_uap0.sh
-# Creates virtual interface uap0 on wlan0 for AP mode if it doesn't exist, then brings it up.
+# Creates a virtual AP interface (uap0) on wlan0 if it doesn't exist, then brings it up.
+# This allows hostapd (configured for interface=uap0) to start properly.
+
 set -e
 
 if ip link show uap0 >/dev/null 2>&1; then

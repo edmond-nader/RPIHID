@@ -288,16 +288,16 @@
 
     function disableHotspot() {
       fetch("/disable_hotspot", { method: "POST" })
-      .then(response => response.json())
-      .then(data => alert(data.message || data.error))
-      .catch(err => alert("Error disabling hotspot."));
+        .then(response => response.json())
+        .then(data => alert(data.message || data.error))
+        .catch(err => alert("Error disabling hotspot."));
     }
 
     function enableHotspot() {
       fetch("/enable_hotspot", { method: "POST" })
-      .then(response => response.json())
-      .then(data => alert(data.message || data.error))
-      .catch(err => alert("Error enabling hotspot."));
+        .then(response => response.json())
+        .then(data => alert(data.message || data.error))
+        .catch(err => alert("Error enabling hotspot."));
     }
 
     function sendText() {
@@ -321,12 +321,12 @@
 
     function checkConnection() {
       fetch("/ping")
-      .then(response => {
-         document.getElementById("connectionIndicator").style.backgroundColor = response.ok ? "green" : "red";
-      })
-      .catch(err => {
-         document.getElementById("connectionIndicator").style.backgroundColor = "red";
-      });
+        .then(response => {
+          document.getElementById("connectionIndicator").style.backgroundColor = response.ok ? "green" : "red";
+        })
+        .catch(err => {
+          document.getElementById("connectionIndicator").style.backgroundColor = "red";
+        });
     }
     setInterval(checkConnection, 5000);
   </script>

@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 # create_uap0.sh
-# Create a virtual interface uap0 for AP mode if it does not exist, then bring it up.
+# Creates virtual interface uap0 on wlan0 for AP mode if not already present, then brings it up.
 set -e
 
 if ip link show uap0 >/dev/null 2>&1; then
     echo "Interface uap0 already exists."
 else
     echo "Creating virtual interface uap0 on wlan0..."
-    iw dev wlan0 interface add uap0 type __ap
+    iw dev wlan0 interface add uap0 type __ap || { echo "Failed to create uap0 interface"; exit 1; }
 fi
 
 ip link set uap0 up

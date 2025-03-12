@@ -4,7 +4,6 @@
   <meta charset="UTF-8">
   <title>RPi HID Keyboard</title>
   <style>
-    /* Basic page styling */
     body {
       background-color: #222;
       color: #fff;
@@ -13,9 +12,7 @@
       font-family: Arial, sans-serif;
       text-align: center;
     }
-    h1 {
-      margin-bottom: 10px;
-    }
+    h1 { margin-bottom: 10px; }
     #connectionIndicator {
       position: fixed;
       top: 10px;
@@ -40,19 +37,10 @@
       opacity: 0;
       transition: opacity 0.5s;
     }
-    .key-press.visible {
-      opacity: 1;
-    }
-    .key-press.fade-out {
-      opacity: 0;
-    }
-    .container {
-      margin: 0 auto;
-    }
-    /* Arrow keys */
-    .arrow-keys {
-      margin-bottom: 30px;
-    }
+    .key-press.visible { opacity: 1; }
+    .key-press.fade-out { opacity: 0; }
+    .container { margin: 0 auto; }
+    .arrow-keys { margin-bottom: 30px; }
     .arrow-row {
       display: flex;
       justify-content: center;
@@ -69,13 +57,8 @@
       min-width: 80px;
       min-height: 60px;
     }
-    .arrow:hover {
-      background: #444;
-    }
-    .arrow:active {
-      background: #555;
-    }
-    /* Main keyboard layout */
+    .arrow:hover { background: #444; }
+    .arrow:active { background: #555; }
     .keyboard {
       display: flex;
       flex-direction: column;
@@ -97,15 +80,9 @@
       font-size: 1rem;
       min-width: 50px;
     }
-    .key:hover {
-      background: #444;
-    }
-    .key:active {
-      background: #555;
-    }
-    .wide {
-      min-width: 80px;
-    }
+    .key:hover { background: #444; }
+    .key:active { background: #555; }
+    .wide { min-width: 80px; }
     button {
       margin: 10px;
       padding: 10px 20px;
@@ -129,27 +106,18 @@
   </style>
 </head>
 <body>
-  <!-- Connection status indicator -->
   <div id="connectionIndicator"></div>
   <h1>Raspberry Pi HID Keyboard</h1>
-  
-  <!-- Key press log -->
   <div class="key-log" id="keyLog"></div>
-  
   <div class="container">
-    <!-- Arrow Keys -->
     <div class="arrow-keys">
-      <div class="arrow-row">
-        <div class="arrow" data-key="up">↑</div>
-      </div>
+      <div class="arrow-row"><div class="arrow" data-key="up">↑</div></div>
       <div class="arrow-row">
         <div class="arrow" data-key="left">←</div>
         <div class="arrow" data-key="down">↓</div>
         <div class="arrow" data-key="right">→</div>
       </div>
     </div>
-    
-    <!-- Main Keyboard Layout -->
     <div class="keyboard">
       <!-- Row 1: Function Keys -->
       <div class="row">
@@ -234,7 +202,6 @@
   </div>
   
   <script>
-    // Attach event listeners to keys and arrows.
     document.querySelectorAll('.key, .arrow').forEach(function(elem) {
       elem.addEventListener('click', function() {
         var key = this.getAttribute('data-key');

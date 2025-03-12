@@ -1,0 +1,11 @@
+[Unit]
+Description=dnsmasq - A lightweight DHCP and caching DNS server
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/sbin/dnsmasq -k --conf-dir=/etc/dnsmasq.d
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target

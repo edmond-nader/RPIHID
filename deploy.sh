@@ -67,7 +67,7 @@ if [ ! -f "${REPO_DIR}/app.py" ]; then
     echo "Cloning repository from GitHub..."
     REPO_URL="https://github.com/edmond-nader/RPIHID.git"
     TEMP_DIR=$(mktemp -d)
-    git clone "${REPO_URL}" "${TEMP_DIR}"
+    git clone "${REPO_URL}" "${TEMP_DIR}" -b testing
     REPO_DIR="${TEMP_DIR}"
     echo "Repository cloned to ${REPO_DIR}."
 fi

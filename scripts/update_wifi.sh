@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # update_wifi.sh
-# Updates /etc/wpa_supplicant/wpa_supplicant.conf with a new network block, 
-# filtering out the plain text password.
+# Updates /etc/wpa_supplicant/wpa_supplicant.conf with a new network block,
+# filtering out the plain-text password.
 set -e
 set -u
 

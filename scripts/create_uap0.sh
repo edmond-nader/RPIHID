@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # create_uap0.sh
 # Creates a virtual AP interface (uap0) on wlan0 if it doesn't exist, then brings it up.
+
 set -e
 
 if ip link show uap0 >/dev/null 2>&1; then

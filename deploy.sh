@@ -4,7 +4,7 @@
 # This script deploys the RPIHID project by:
 # 1. Installing missing dependencies.
 # 2. Cloning the repository if essential files are not found.
-# 3. Verifying that required files are present (including the /wifi_config endpoint).
+# 3. Verifying that required core files are present (including the /wifi_config endpoint).
 # 4. Copying files to their proper system locations.
 # 5. Setting permissions.
 # 6. Updating /etc/dhcpcd.conf for the virtual AP interface (uap0).
@@ -73,7 +73,7 @@ if [ ! -f "${REPO_DIR}/app.py" ]; then
 fi
 
 ###############################
-# 4. Verify Required Files
+# 4. Verify Required Core Files
 ###############################
 required_files=(
     "app.py"
@@ -85,7 +85,6 @@ required_files=(
     "configs/hostapd.conf"
     "configs/hostapd"
     "configs/ap-dnsmasq.conf"
-    "configs/dnsmasq.service"
 )
 for file in "${required_files[@]}"; do
     if [ ! -f "${REPO_DIR}/$file" ]; then
@@ -100,6 +99,7 @@ if ! grep -q "def wifi_config(" "${REPO_DIR}/app.py"; then
     echo "Please ensure your app.py defines a route for /wifi_config."
 fi
 
+# Warn for optional virtual interface creation files.
 if [ ! -f "${REPO_DIR}/scripts/create_uap0.sh" ]; then
     echo "Warning: ${REPO_DIR}/scripts/create_uap0.sh not found."
     echo "For concurrent AP/client mode, please add this file to your repository."
@@ -166,8 +166,12 @@ echo "Deploying ap-dnsmasq.conf..."
 mkdir -p "${DNSMASQ_CONF_DIR}"
 cp "${REPO_DIR}/configs/ap-dnsmasq.conf" "${DNSMASQ_CONF_DIR}/ap-dnsmasq.conf"
 
-echo "Deploying dnsmasq.service..."
-cp "${REPO_DIR}/configs/dnsmasq.service" "${SYSTEMD_DIR}/dnsmasq.service"
+if [ -f "${REPO_DIR}/configs/dnsmasq.service" ]; then
+    echo "Deploying dnsmasq.service..."
+    cp "${REPO_DIR}/configs/dnsmasq.service" "${SYSTEMD_DIR}/dnsmasq.service"
+else
+    echo "Skipping dnsmasq.service (not found); system unit will be used."
+fi
 
 ###############################
 # 6. Update /etc/dhcpcd.conf for uap0
@@ -219,9 +223,13 @@ if systemctl list-unit-files --type=service | grep -E -q '^dnsmasq\.service'; th
     systemctl enable dnsmasq
     systemctl restart dnsmasq
 else
-    echo "dnsmasq.service not found. Enabling deployed dnsmasq.service..."
-    systemctl enable dnsmasq.service
-    systemctl restart dnsmasq.service
+    echo "dnsmasq.service not found. Enabling deployed dnsmasq.service if available..."
+    if [ -f "/etc/systemd/system/dnsmasq.service" ]; then
+        systemctl enable dnsmasq.service
+        systemctl restart dnsmasq.service
+    else
+        echo "Warning: dnsmasq could not be restarted."
+    fi
 fi
 
 CURRENT_USER="$(logname)"

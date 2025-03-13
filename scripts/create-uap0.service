@@ -1,24 +1,13 @@
 [Unit]
 Description=Create Virtual AP Interface uap0
-# Make sure this service finishes before hostapd attempts to start.
 Before=hostapd.service
-# Ensure the network is at least partially up before we do anything.
 After=network.target
 
 [Service]
 Type=oneshot
-RemainAfterExit=true
-
-# 1. Stop hostapd/dnsmasq if they're running
-ExecStartPre=/usr/bin/systemctl stop hostapd
-ExecStartPre=/usr/bin/systemctl stop dnsmasq
-
-# 2. Create the interface
+Environment=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 ExecStart=/usr/local/bin/create_uap0.sh
-
-# 3. After the interface is up, start dnsmasq and hostapd again
-ExecStartPost=/usr/bin/systemctl start dnsmasq
-ExecStartPost=/usr/bin/systemctl start hostapd
+RemainAfterExit=true
 
 [Install]
 WantedBy=multi-user.target

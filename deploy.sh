@@ -85,6 +85,7 @@ required_files=(
     "configs/hostapd.conf"
     "configs/hostapd"
     "configs/ap-dnsmasq.conf"
+    "configs/dnsmasq.service"
 )
 for file in "${required_files[@]}"; do
     if [ ! -f "${REPO_DIR}/$file" ]; then
@@ -99,7 +100,6 @@ if ! grep -q "def wifi_config(" "${REPO_DIR}/app.py"; then
     echo "Please ensure your app.py defines a route for /wifi_config."
 fi
 
-# Warn for optional virtual interface creation files.
 if [ ! -f "${REPO_DIR}/scripts/create_uap0.sh" ]; then
     echo "Warning: ${REPO_DIR}/scripts/create_uap0.sh not found."
     echo "For concurrent AP/client mode, please add this file to your repository."
@@ -166,12 +166,8 @@ echo "Deploying ap-dnsmasq.conf..."
 mkdir -p "${DNSMASQ_CONF_DIR}"
 cp "${REPO_DIR}/configs/ap-dnsmasq.conf" "${DNSMASQ_CONF_DIR}/ap-dnsmasq.conf"
 
-if [ -f "${REPO_DIR}/configs/dnsmasq.service" ]; then
-    echo "Deploying dnsmasq.service..."
-    cp "${REPO_DIR}/configs/dnsmasq.service" "${SYSTEMD_DIR}/dnsmasq.service"
-else
-    echo "Skipping dnsmasq.service (not found); system unit will be used."
-fi
+echo "Deploying dnsmasq.service..."
+cp "${REPO_DIR}/configs/dnsmasq.service" "${SYSTEMD_DIR}/dnsmasq.service"
 
 ###############################
 # 6. Update /etc/dhcpcd.conf for uap0

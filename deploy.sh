@@ -200,6 +200,11 @@ systemctl daemon-reload
 
 if [ -f "/etc/systemd/system/create-uap0.service" ]; then
     echo "Enabling create-uap0.service..."
+    sudo systemctl stop hostapd
+    sudo systemctl stop dnsmasq
+    sudo /usr/local/bin/create_uap0.sh  # or wherever your script is
+    ip addr show uap0                   # verify it exists
+    sudo systemctl start hostapd
     systemctl enable create-uap0.service
     systemctl start create-uap0.service
 elif [ -f "${INSTALL_PREFIX}/create_uap0.sh" ]; then
